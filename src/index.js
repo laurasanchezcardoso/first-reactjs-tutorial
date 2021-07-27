@@ -18,8 +18,15 @@ class Board extends React.Component {
   renderSquare(i) {
     return <Square
       value={this.props.squares[i]}
-      onClick={() => this.props.handleClick(i)}
+      onClick={() => this.props.onClick(i)}
     />;
+  }
+  renderBoard(){
+    for(var row = 0; row < 3; row++){
+      for(var col = 0; col < 3; col++){
+        this.renderSquare(3*row + col)
+      }
+    }
   }
 
   render() {
@@ -52,12 +59,13 @@ class Game extends React.Component {
       history: [{
         squares: Array(9).fill(null),
       }],
+      stepNumber: 0,
       xIsNext: true,
     };
   }
 
   handleClick(i) {
-    const history = this.state.history;
+    const history = this.state.history.slice(0, this.state.stepNumber+1);
     const current = history[history.length -1];
     const squares = current.squares.slice();
     if (calculateWinner(squares) || squares[i]){
@@ -68,22 +76,31 @@ class Game extends React.Component {
       history: history.concat([{
         squares: squares,
       }]),
+      stepNumber: history.length,
       xIsNext: !this.state.xIsNext,
     })
   }
   
+  jumpTo(step){
+    this.setState({
+      stepNumber: step,
+      xIsNext: (step % 2) === 0,
+    });
+  }
   render() {
     const history = this.state.history;
-    const current = history[history.length -1];
+    const current = history[this.state.stepNumber];
     const winner = calculateWinner(current.squares);
 
     const moves = history.map((step,move) =>{
+      let previous = move !== 0 ?  history[move-1].squares : Array(9).fill(null);
+      let changed = whatChanged(previous,history[move].squares)
       const desc = move ?
-        'Go to move #' + move :
+        'Go to move #' + move + '(' + (changed % 3) + ',' + Math.floor(changed/3) + ')':
         'Go to game start';
       return (
-        <li>
-          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+        <li key={move} className={`${move === this.state.stepNumber ? "current-move" : ""}`}>
+          <button onClick={() => this.jumpTo(move)}  >{desc}</button>
         </li>
       );
     });
@@ -136,4 +153,21 @@ function calculateWinner(squares) {
     }
   }
   return null;
+}
+
+function whatChanged(past,present){
+  let found = false;
+  let index = 0;
+  while(index < 9 && !found){
+    if(past[index] !== present[index]){
+      found = true;
+    }else{
+      index++;
+    }
+  }
+  if(!found){
+    return -1;
+  }else{
+    return index;
+  }
 }
